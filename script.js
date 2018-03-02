@@ -6,7 +6,7 @@ let geometry, material, cube;
 let data;
 let meshWidth = 500;
 let meshLength = 500;
-let meshScale = 100;
+let meshScale = 30;
 let mesh
 let key = null;
 //window.addEventListener('keyup',this.getKeyup,false)
@@ -49,9 +49,9 @@ function init() {
 	scene.add( lights[ 2 ] );
 
 
-	data = createHeightmap(meshWidth, meshLength, 0.03);
+	data = createHeightmap(meshWidth, meshLength, 0.005);
 
-	let geometry = new THREE.PlaneBufferGeometry( 7500, 7500, meshWidth-1, meshLength-1);
+	let geometry = new THREE.PlaneBufferGeometry( 500, 500, meshWidth-1, meshLength-1);
 	//geometry.addAttribute('position', new THREE.BufferAttribute(49*49*3, 3))
 	verticies = geometry.attributes.position.array;
 	console.log(geometry.attributes.position.array);
@@ -91,7 +91,11 @@ function createHeightmap(w,l,scale) {
 	noise.seed(Math.random());
 	for(let i = 0; i < w; i++){
 		for(let j = 0; j < l; j++) {
-			heightmap.push(noise.simplex2(i*scale,j*scale));
+			let n1 = noise.simplex2(i*scale,j*scale)
+			let n2 = noise.simplex2(i*scale*2,j*scale*2)
+			let n3 = noise.simplex2(i*scale*16,j*scale*16)
+			heightmap.push((n1+n2/2));
+			//heightmap.push(n1)
 		}
 	}
 	return heightmap;
