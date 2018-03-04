@@ -1,27 +1,17 @@
 //script.js
 //uses three.js and perlin.js
 let scene, camera, renderer;
-
+let controls;
 let geometry, material, cube;
 let data;
-let meshWidth = 500;
-let meshLength = 500;
-let meshScale = 20;
+let meshWidth = 100;
+let meshLength = 100;
+let meshScale = 35;
 let mesh
 let key = null;
+let clock = new THREE.Clock();
 //window.addEventListener('keyup',this.getKeyup,false)
 //window.addEventListener('keypress', this.getKeypress, false)
-
-
-let getKeydown = function(e) {
-	if(e === undefined) {
-		key = null;
-	}
-	else if(e.keyCode) {
-		key = e.keyCode;
-	}
-}
-window.addEventListener('keydown',getKeydown,false);
 /*function getKeyup(e) {
 	return e.keyCode;
 }
@@ -38,9 +28,9 @@ function init() {
 	//add camera controls
 
 	var lights = [];
-	lights[ 0 ] = new THREE.PointLight( 0xbbbbbb, 1, 0 );
-	lights[ 1 ] = new THREE.PointLight( 0xbbbbbb, 1, 0 );
-	lights[ 2 ] = new THREE.PointLight( 0xbbbbbb, 1, 0 );
+	lights[ 0 ] = new THREE.PointLight( 0x888888, 1, 0 );
+	lights[ 1 ] = new THREE.PointLight( 0x888888, 1, 0 );
+	lights[ 2 ] = new THREE.PointLight( 0x888888, 1, 0 );
 	lights[ 0 ].position.set( 0, 200, 0 );
 	lights[ 1 ].position.set( 100, 200, 100 );
 	lights[ 2 ].position.set( - 100, - 200, - 100 );
@@ -48,8 +38,12 @@ function init() {
 	scene.add( lights[ 1 ] );
 	scene.add( lights[ 2 ] );
 
+	controls = new THREE.FirstPersonControls( camera );
+				controls.movementSpeed = 50;
+				controls.lookSpeed = .3;
+				controls.lookVertical = true;
 
-	data = createHeightmap(meshWidth, meshLength, 0.005, 4, .5, 0,1);
+	data = createHeightmap(meshWidth, meshLength, 0.0004, 8, .25, 0,1);
 
 	let geometry = new THREE.PlaneBufferGeometry( 500, 500, meshWidth-1, meshLength-1);
 	//geometry.addAttribute('position', new THREE.BufferAttribute(49*49*3, 3))
@@ -63,11 +57,11 @@ function init() {
 	geometry.attributes.position.needsUpdate = true;
 	geometry.computeVertexNormals()
 
-	mesh = new THREE.Mesh( geometry, new THREE.MeshLambertMaterial( {color: 0x77ff77, side: THREE.DoubleSide} ));
-/*	new THREE.MeshPhongMaterial({
+	mesh = new THREE.Mesh( geometry, //new THREE.MeshLambertMaterial( {color: 0x77ff77, side: THREE.DoubleSide} ));
+	new THREE.MeshPhongMaterial({
   color: 0xdddddd, 
   wireframe: true
-}));*/
+}));
 	renderer = new THREE.WebGLRenderer();
 	renderer.setClearColor( 0xaaaaee, 1 );
 	renderer.setSize( window.innerWidth, window.innerHeight );
@@ -80,9 +74,8 @@ function init() {
 
 function animate() {
 	requestAnimationFrame( animate );
-	handleInput();
 	renderer.render( scene, camera );
-
+	controls.update( clock.getDelta() )
 }
 
 function createHeightmap(w,l,scale,octaves,persistence,bot,top) {
@@ -104,44 +97,9 @@ function createHeightmap(w,l,scale,octaves,persistence,bot,top) {
 			}
 			heightmap[hpIndex] /= maxAmp;
 
-			//heightmap[hpIndex] = heightmap[hpIndex] * (top-bot)/2 + (top+bot)/2;
 			hpIndex++;
-			/*
-			let n1 = noise.simplex2(i*scale,j*scale)
-			let n2 = noise.simplex2(i*scale*2,j*scale*2)
-			let n3 = noise.simplex2(i*scale*16,j*scale*16)
-			heightmap.push((n1+n2/2));
-			//heightmap.push(n1)
-			*/
 		}
 	}
 	return heightmap;
-}
-
-
-
-function handleInput() {
-	//w
-	if(key === 87) {
-		camera.position.x +=1;
-	}
-	//s
-	else if(key === 83) {
-		camera.position.x -=1;
-	}
-	//d
-	if(key === 68) {
-		camera.position.z +=1;
-	}
-	if(key === 65) {
-		camera.position.z -=1;
-	}
-		//up down
-	if(key === 32) {
-		camera.position.y +=1;
-	}
-	if(key === 16) {
-		camera.position.y -=1;
-	}
 }
 

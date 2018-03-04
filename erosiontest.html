@@ -1,0 +1,81 @@
+<!--quick erosion test-->
+<script src="js/perlin.js"></script>
+<canvas id="canvas" width="500px" height="500px"></canvas>
+<script>
+let c = document.getElementById('canvas');
+let ctx = c.getContext('2d');
+
+let data = createHeightmap(500, 500, 0.007, 8, 0.5, 0,255)
+
+console.log(data)
+
+let imgData = ctx.createImageData(500,500)
+let img = imgData.data;
+console.log(img)
+for(let i = 0; i < img.length/4; i++) {
+	img[4*i] = data[i];
+	img[4*i+1] = data[i];
+	img[4*i+2] = data[i];
+	img[4*i+3] = 255;
+}
+ctx.putImageData(imgData, 0, 0)
+
+let array = bufferTo2d(data,500,500);
+let other = bufferFrom2d(array);
+console.log(array)
+console.log(other)
+let bool = data === other;
+console.log(bool);
+
+
+function createHeightmap(w,l,scale,octaves,persistence,bot,top) {
+	//let heightmap = [...Array(w)].map(i => Array(l));
+	let heightmap = [];
+	let hpIndex = 0;
+	noise.seed(Math.random());
+	for(let i = 0; i < w; i++){
+		for(let j = 0; j < l; j++) {
+			let maxAmp = 0
+			let amp = 1
+			let freq = scale
+			heightmap[hpIndex] = 0
+			for(let k = 0; k < octaves; k++){
+				heightmap[hpIndex] += noise.simplex2(i*freq,j*freq);
+				maxAmp += amp;
+				amp *= persistence;
+				freq *= 2
+			}
+			heightmap[hpIndex] /= maxAmp;
+			heightmap[hpIndex] = heightmap[hpIndex] * (top - bot) / 2 + (top + bot) / 2
+			hpIndex++;
+		}
+	}
+	return heightmap;
+}
+function bufferTo2d(data, width,height) {
+	let retDat = [...Array(width)].map(i => Array(height))
+	let index = 0
+	for(let i = 0; i < height; i++) {
+		for(let j = 0; j < width; i++) {
+			retDat[i][j] = data[index];
+			index++;
+
+		}
+	}
+}
+function bufferFrom2d(data) {
+	let retDat;
+	for(let i = 0; i < data.length; i++) {
+		for(let j = 0; j < data[0].length; i++) {
+			retDat.push(data[i][j]);
+		}
+	}
+	return(retDat);
+}
+
+function erodeHeightmap(data) {
+
+}
+
+
+</script>
