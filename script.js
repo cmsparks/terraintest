@@ -4,9 +4,9 @@ let scene, camera, renderer;
 let controls;
 let geometry, material, cube;
 let data;
-let meshWidth = 100;
-let meshLength = 100;
-let meshScale = 35;
+let meshWidth = 500;
+let meshLength = 500;
+let meshScale = 20;
 let mesh
 let key = null;
 let clock = new THREE.Clock();
@@ -43,7 +43,7 @@ function init() {
 				controls.lookSpeed = .3;
 				controls.lookVertical = true;
 
-	data = createHeightmap(meshWidth, meshLength, 0.0004, 8, .25, 0,1);
+	data = createHeightmap(meshWidth, meshLength, 0.00007, 8, .25, 0,1);
 
 	let geometry = new THREE.PlaneBufferGeometry( 500, 500, meshWidth-1, meshLength-1);
 	//geometry.addAttribute('position', new THREE.BufferAttribute(49*49*3, 3))
@@ -57,11 +57,11 @@ function init() {
 	geometry.attributes.position.needsUpdate = true;
 	geometry.computeVertexNormals()
 
-	mesh = new THREE.Mesh( geometry, //new THREE.MeshLambertMaterial( {color: 0x77ff77, side: THREE.DoubleSide} ));
-	new THREE.MeshPhongMaterial({
+	mesh = new THREE.Mesh( geometry, new THREE.MeshLambertMaterial( {color: 0x77ff77, side: THREE.DoubleSide} ));
+/*	new THREE.MeshPhongMaterial({
   color: 0xdddddd, 
   wireframe: true
-}));
+}));*/
 	renderer = new THREE.WebGLRenderer();
 	renderer.setClearColor( 0xaaaaee, 1 );
 	renderer.setSize( window.innerWidth, window.innerHeight );

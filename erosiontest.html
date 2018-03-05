@@ -73,8 +73,35 @@ function bufferFrom2d(data) {
 	return(retDat);
 }
 
-function erodeHeightmap(data) {
+function hydraulicErosion(data_in, iterations, rain_amount, erosion_weight, evaporation, capacity) {
+	let water_table = [...Array(data.length)].map(i => Array(data[0].length))
+	let sediment_table = [...Array(data.length)].map(i => Array(data[0].length))
+	let data = data_in;
+	for (let i = 0; i < iterations; i++) {
+		//populate water table
+		for(let j = 0; j < water_table.length; j++ ){
+			for(let k = 0; k < water_table[0].length; k++ ) {
+				water_table[j][k] += 1;
+			}
+		}
 
+		//move solubility*water[pixel] into sediment table
+		for(let j = 0; j < data.length; j++ ){
+			for(let k = 0; k < data[0].length; k++ ) {
+				moved_sediment = data[j][k] * solubility * water[j][k]
+				data[j][k] -= moved_sediment;
+				sediment_table += moved_sediment;
+			}
+		}
+
+		//move water downhill
+		for(let j = 0; j < data.length; j++) {
+			for(let k = 0; k < data[0].length; k++) {
+
+			}
+		}
+	}
+	return data;
 }
 
 
