@@ -1,17 +1,23 @@
-<!--quick erosion test-->
+<!--quick erosion test
+TERRIBLY SLOW ATM - It takes a good 30s-1m to actually erode terrain.
+I am going to convert this erosion stuff to a GLSL compute shader.
+-->
 <script src="js/perlin.js"></script>
-<canvas id="canvas" width="500px" height="500px"></canvas>
+<canvas id="canvas" width="200px" height="200px"></canvas>
 <script>
 let c = document.getElementById('canvas');
 let ctx = c.getContext('2d');
+let res;
+let data = createHeightmap(200, 200, 0.005, 5, 0.5, 0,255)
+//let test = bufferTo2d(data,200)
+//let hydraulicData = hydraulicErosion(test, 50, 1, 2, 3, 1)
+//data = bufferFrom2d(hydraulicData)
 
-let data = createHeightmap(500, 500, 0.007, 8, 0.5, 0,255)
 
-console.log(data)
 
-let imgData = ctx.createImageData(500,500)
+let imgData = ctx.createImageData(200,200)
 let img = imgData.data;
-console.log(img)
+
 for(let i = 0; i < img.length/4; i++) {
 	img[4*i] = data[i];
 	img[4*i+1] = data[i];
@@ -20,19 +26,12 @@ for(let i = 0; i < img.length/4; i++) {
 }
 ctx.putImageData(imgData, 0, 0)
 
-let array = bufferTo2d(data,500,500);
-let other = bufferFrom2d(array);
-console.log(array)
-console.log(other)
-let bool = data === other;
-console.log(bool);
-
 
 function createHeightmap(w,l,scale,octaves,persistence,bot,top) {
 	//let heightmap = [...Array(w)].map(i => Array(l));
 	let heightmap = [];
 	let hpIndex = 0;
-	noise.seed(Math.random());
+	noise.seed(23);
 	for(let i = 0; i < w; i++){
 		for(let j = 0; j < l; j++) {
 			let maxAmp = 0
@@ -52,56 +51,104 @@ function createHeightmap(w,l,scale,octaves,persistence,bot,top) {
 	}
 	return heightmap;
 }
-function bufferTo2d(data, width,height) {
-	let retDat = [...Array(width)].map(i => Array(height))
-	let index = 0
-	for(let i = 0; i < height; i++) {
-		for(let j = 0; j < width; i++) {
-			retDat[i][j] = data[index];
-			index++;
+function bufferTo2d(arr, size) {
+	  res = []; 
+      for(var i=0;i < arr.length;i = i+size){
+        res.push(arr.slice(i,i+size));
+    }
+      return res;
 
+	/*let retDat = Array(width).fill().map(() => Array(height).fill(0));
+	for(let i = 0; i < width; i++) {
+		for(let j = 0; j < height; j++) {
+			retDat[i][j] += data_in[(j*height)+i]
 		}
 	}
+	return retDat;*/
 }
-function bufferFrom2d(data) {
-	let retDat;
-	for(let i = 0; i < data.length; i++) {
-		for(let j = 0; j < data[0].length; i++) {
-			retDat.push(data[i][j]);
+function bufferFrom2d(data_in) {
+	let retDat = [];
+	for(let i = 0; i < data_in.length; i++) {
+		for(let j = 0; j < data_in[0].length; j++) {
+			retDat.push(data_in[i][j]);
 		}
 	}
-	return(retDat);
+	return retDat;
 }
 
-function hydraulicErosion(data_in, iterations, rain_amount, erosion_weight, evaporation, capacity) {
-	let water_table = [...Array(data.length)].map(i => Array(data[0].length))
-	let sediment_table = [...Array(data.length)].map(i => Array(data[0].length))
-	let data = data_in;
+
+function hydraulicErosion(arr, iterations, rain_amount, erosion_weight, evaporation, capacity) {
+	let data_in = arr;
+	let water_table = Array(data_in.length).fill().map(() => Array(data_in[0].length).fill(0));
+	let sediment_table = Array(data_in.length).fill().map(() => Array(data_in[0].length).fill(0));
 	for (let i = 0; i < iterations; i++) {
 		//populate water table
-		for(let j = 0; j < water_table.length; j++ ){
-			for(let k = 0; k < water_table[0].length; k++ ) {
-				water_table[j][k] += 1;
-			}
-		}
-
 		//move solubility*water[pixel] into sediment table
-		for(let j = 0; j < data.length; j++ ){
-			for(let k = 0; k < data[0].length; k++ ) {
-				moved_sediment = data[j][k] * solubility * water[j][k]
-				data[j][k] -= moved_sediment;
-				sediment_table += moved_sediment;
+		for(let j = 0; j < data_in.length; j++ ){
+			for(let k = 0; k < data_in[0].length; k++ ) {
+				water_table[j][k] += 1;
+				let moved_sediment = data_in[j][k] * erosion_weight * water_table[j][k]
+				data_in[j][k] -= moved_sediment;
+				sediment_table[j][k] += moved_sediment;
 			}
 		}
 
 		//move water downhill
-		for(let j = 0; j < data.length; j++) {
-			for(let k = 0; k < data[0].length; k++) {
+		let changed_water = Array(data_in.length).fill().map(() => Array(data_in[0].length).fill(0));
+		let changed_sediment = Array(data_in.length).fill().map(() => Array(data_in[0].length).fill(0));
+		for(let j = 0; j < data_in.length; j++) {
+			for(let k = 0; k < data_in[0].length; k++) {
+				let current_level = data_in[j][k]
+				let up = (j-1 > 0) ? data_in[j-1][k] : Number.MAX_SAFE_INTEGER;
+				let left = (k-1 > 0) ? data_in[j][k-1] : Number.MAX_SAFE_INTEGER;
+				let down = (j+1 < data_in.length) ? data_in[j+1][k] : Number.MAX_SAFE_INTEGER;
+				let right = (k+1 < data_in[0].length) ? data_in[j][k+1] : Number.MAX_SAFE_INTEGER;
+				let locArray = [current_level, up, down, left, right]
 
+				let index = 0;
+				let val = locArray[0];
+				for(var l = 1; l < locArray.length; l++) {
+					if(locArray < val) {
+						val = locArray[l];
+						index = l;
+					}
+				}
+				if(index = current_level) {
+
+				}
+				else if(index === 1) {
+					changed_water[j-1][k] += water_table[j][k]
+					changed_sediment[j-1][k] += sediment_table[j][k]
+				}
+				else if(index === 2) {
+					changed_water[j+1][k] += water_table[j][k]
+					changed_sediment[j+1][k] += sediment_table[j][k]
+				}
+				else if(index === 3) {
+					changed_water[j][k-1] += water_table[j][k]
+					changed_sediment[j][k-1] += sediment_table[j][k]
+				}
+				else if(index === 4) {
+					changed_water[j][k+1] += water_table[j][k]
+					changed_sediment[j][k+1] += sediment_table[j][k]
+				}
+			}
+		}
+
+		water_table = changed_water;
+		//evaporation and deposition
+		for(let j = 0; j < data_in.length; j++) {
+			for(let k = 0; k < data_in[0].length; k++) {
+				water_table[j][k] -= water_table[j][k] * evaporation
+				if (sediment_table[j][k] > capacity*water_table[j][k]) {
+					data_in[j][k] += sediment_table[j][k]+capacity*water_table[j][k]
+					sediment_table[j][k] = capacity*water_table[j][k]
+				}
 			}
 		}
 	}
-	return data;
+
+	return data_in;
 }
 
 
