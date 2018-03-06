@@ -3,19 +3,20 @@ TERRIBLY SLOW ATM - It takes a good 30s-1m to actually erode terrain.
 I am going to convert this erosion stuff to a GLSL compute shader.
 -->
 <script src="js/perlin.js"></script>
-<canvas id="canvas" width="200px" height="200px"></canvas>
+<canvas id="canvas" width="500px" height="500px"></canvas>
 <script>
 let c = document.getElementById('canvas');
 let ctx = c.getContext('2d');
 let res;
-let data = createHeightmap(200, 200, 0.005, 5, 0.5, 0,255)
-//let test = bufferTo2d(data,200)
-//let hydraulicData = hydraulicErosion(test, 50, 1, 2, 3, 1)
-//data = bufferFrom2d(hydraulicData)
+let data = createHeightmap(500, 500, 0.003, 8, 0.5, 0,255)
+let test = bufferTo2d(data,500)
+let hydraulicData = hydraulicErosion(test, 500, 1, .1, 1, 0.5)
+console.log(JSON.parse(JSON.stringify(hydraulicData)))
+hydraulicData = convertBounds(hydraulicData, 255)
+data = bufferFrom2d(hydraulicData)
 
 
-
-let imgData = ctx.createImageData(200,200)
+let imgData = ctx.createImageData(500,500)
 let img = imgData.data;
 
 for(let i = 0; i < img.length/4; i++) {
@@ -26,6 +27,28 @@ for(let i = 0; i < img.length/4; i++) {
 }
 ctx.putImageData(imgData, 0, 0)
 
+function convertBounds(data_in, top) {
+	let largest = data_in[0][0];
+	let smallest = data_in[0][0];
+	for(let i = 0; i < data_in.length; i++){
+		for(let j = 0; j < data_in[0].length; j++) {
+			if(data_in[i][j] > largest){
+				largest = data_in[i][j];
+			}
+			if(data_in[i][j] < smallest){
+				smallest = data_in[i][j];
+			}
+		}
+	}
+	console.log(largest+" "+smallest)
+	for(let i = 0; i < data_in.length; i++){
+		for(let j = 0; j < data_in[0].length; j++) {
+			data_in[i][j] = ((data_in[i][j] - smallest)/(largest - smallest))*top
+		}
+	}
+	console.log(JSON.parse(JSON.stringify(data_in)))
+	return data_in;
+}
 
 function createHeightmap(w,l,scale,octaves,persistence,bot,top) {
 	//let heightmap = [...Array(w)].map(i => Array(l));
@@ -82,17 +105,21 @@ function hydraulicErosion(arr, iterations, rain_amount, erosion_weight, evaporat
 	let water_table = Array(data_in.length).fill().map(() => Array(data_in[0].length).fill(0));
 	let sediment_table = Array(data_in.length).fill().map(() => Array(data_in[0].length).fill(0));
 	for (let i = 0; i < iterations; i++) {
+		console.log(i)
 		//populate water table
-		//move solubility*water[pixel] into sediment table
 		for(let j = 0; j < data_in.length; j++ ){
 			for(let k = 0; k < data_in[0].length; k++ ) {
 				water_table[j][k] += 1;
+			}
+		}
+		//move solubility*water[pixel] into sediment table
+		for(let j = 0; j < data_in.length; j++ ){
+			for(let k = 0; k < data_in[0].length; k++ ) {
 				let moved_sediment = data_in[j][k] * erosion_weight * water_table[j][k]
 				data_in[j][k] -= moved_sediment;
 				sediment_table[j][k] += moved_sediment;
 			}
 		}
-
 		//move water downhill
 		let changed_water = Array(data_in.length).fill().map(() => Array(data_in[0].length).fill(0));
 		let changed_sediment = Array(data_in.length).fill().map(() => Array(data_in[0].length).fill(0));
@@ -104,17 +131,17 @@ function hydraulicErosion(arr, iterations, rain_amount, erosion_weight, evaporat
 				let down = (j+1 < data_in.length) ? data_in[j+1][k] : Number.MAX_SAFE_INTEGER;
 				let right = (k+1 < data_in[0].length) ? data_in[j][k+1] : Number.MAX_SAFE_INTEGER;
 				let locArray = [current_level, up, down, left, right]
-
 				let index = 0;
 				let val = locArray[0];
 				for(var l = 1; l < locArray.length; l++) {
-					if(locArray < val) {
+					if(locArray[l] < val) {
 						val = locArray[l];
 						index = l;
 					}
 				}
-				if(index = current_level) {
-
+				if(index === current_level) {
+					changed_water[j][k] = water_table[j][k]
+					changed_sediment[j][k] = sediment_table[j][k]
 				}
 				else if(index === 1) {
 					changed_water[j-1][k] += water_table[j][k]
@@ -134,7 +161,7 @@ function hydraulicErosion(arr, iterations, rain_amount, erosion_weight, evaporat
 				}
 			}
 		}
-
+		sediment_table = changed_sediment;
 		water_table = changed_water;
 		//evaporation and deposition
 		for(let j = 0; j < data_in.length; j++) {
@@ -146,6 +173,8 @@ function hydraulicErosion(arr, iterations, rain_amount, erosion_weight, evaporat
 				}
 			}
 		}
+
+
 	}
 
 	return data_in;
