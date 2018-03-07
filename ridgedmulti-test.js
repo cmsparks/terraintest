@@ -180,5 +180,43 @@ function hydraulicErosion(arr, iterations, rain_amount, erosion_weight, evaporat
 	return data_in;
 }
 
+function getSimplex(x,y,octaves,scale,persistence, seed) {
+	let out_noise = 0;
+	let maxAmp = 0;
+	let amp = 1
+	let freq = scale;
+	noise.seed(seed);
+	for(let k = 0; k < octaves; k++) {
+		out_noise += noise.simplex2(x*freq, y*freq);
+		maxAmp += amp;
+		amp *= persistence;
+		freq *= 2;
+	}
+	out_noise /= maxAmp;
+	return out_noise
+}
+
+function createRidged(w, l, freq, lacunarity, octaves, seed) {
+	let heightmap = [];
+	let hpIndex = 0;
+	let seeds = []
+	for(let i = 0; i < octaves; i++){
+		seeds.push(Math.random());
+	}
+	//noise.seed(32);
+	for(let i = 0; i < w; i++){
+		for(let j = 0; j < l; j++) {
+			let persistence = 1
+			for(let o = 0; o < octaves; o++){
+				let simplex = getSimplex(i,j,1,scale,persistence,seed)
+				simplex = Math.abs();
+				signal = offset
+				heightmap[hpIndex]
+				hpIndex++;
+			}
+		}
+	}
+	return heightmap;
+}
 
 </script>

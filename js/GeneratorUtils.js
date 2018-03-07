@@ -1,60 +1,12 @@
-<!--quick erosion test
-TERRIBLY SLOW ATM - It takes a good 30s-1m to actually erode terrain.
-I am going to convert this erosion stuff to a GLSL compute shader.
--->
-<script src="js/perlin.js"></script>
-<canvas id="canvas" width="500px" height="500px"></canvas>
-<script>
-let c = document.getElementById('canvas');
-let ctx = c.getContext('2d');
-let res;
-let data = createHeightmap(500, 500, 0.003, 8, 0.5, 0,255)
-let test = bufferTo2d(data,500)
-let hydraulicData = hydraulicErosion(test, 500, 1, .1, 1, 0.5)
-console.log(JSON.parse(JSON.stringify(hydraulicData)))
-hydraulicData = convertBounds(hydraulicData, 255)
-data = bufferFrom2d(hydraulicData)
-
-
-let imgData = ctx.createImageData(500,500)
-let img = imgData.data;
-
-for(let i = 0; i < img.length/4; i++) {
-	img[4*i] = data[i];
-	img[4*i+1] = data[i];
-	img[4*i+2] = data[i];
-	img[4*i+3] = 255;
-}
-ctx.putImageData(imgData, 0, 0)
-
-function convertBounds(data_in, top) {
-	let largest = data_in[0][0];
-	let smallest = data_in[0][0];
-	for(let i = 0; i < data_in.length; i++){
-		for(let j = 0; j < data_in[0].length; j++) {
-			if(data_in[i][j] > largest){
-				largest = data_in[i][j];
-			}
-			if(data_in[i][j] < smallest){
-				smallest = data_in[i][j];
-			}
-		}
-	}
-	console.log(largest+" "+smallest)
-	for(let i = 0; i < data_in.length; i++){
-		for(let j = 0; j < data_in[0].length; j++) {
-			data_in[i][j] = ((data_in[i][j] - smallest)/(largest - smallest))*top
-		}
-	}
-	console.log(JSON.parse(JSON.stringify(data_in)))
-	return data_in;
-}
-
 function createHeightmap(w,l,scale,octaves,persistence,bot,top) {
 	//let heightmap = [...Array(w)].map(i => Array(l));
 	let heightmap = [];
 	let hpIndex = 0;
-	noise.seed(23);
+	let seeds = []
+	for(let i = 0; i < octaves; i++){
+		seeds.push(Math.random());
+	}
+	//noise.seed(32);
 	for(let i = 0; i < w; i++){
 		for(let j = 0; j < l; j++) {
 			let maxAmp = 0
@@ -62,54 +14,71 @@ function createHeightmap(w,l,scale,octaves,persistence,bot,top) {
 			let freq = scale
 			heightmap[hpIndex] = 0
 			for(let k = 0; k < octaves; k++){
+				noise.seed(seeds[k]);
 				heightmap[hpIndex] += noise.simplex2(i*freq,j*freq);
 				maxAmp += amp;
 				amp *= persistence;
 				freq *= 2
 			}
 			heightmap[hpIndex] /= maxAmp;
-			heightmap[hpIndex] = heightmap[hpIndex] * (top - bot) / 2 + (top + bot) / 2
+
 			hpIndex++;
 		}
 	}
 	return heightmap;
 }
+
 function bufferTo2d(arr, size) {
 	  res = []; 
       for(var i=0;i < arr.length;i = i+size){
         res.push(arr.slice(i,i+size));
     }
     return res;
-
-	/*let retDat = Array(width).fill().map(() => Array(height).fill(0));
-	for(let i = 0; i < width; i++) {
-		for(let j = 0; j < height; j++) {
-			retDat[i][j] += data_in[(j*height)+i]
-		}
-	}
-	return retDat;*/
 }
-function bufferFrom2d(data_in) {
+
+function bufferFrom2d(arr) {
 	let retDat = [];
-	for(let i = 0; i < data_in.length; i++) {
-		for(let j = 0; j < data_in[0].length; j++) {
-			retDat.push(data_in[i][j]);
+	for(let i = 0; i < arr.length; i++) {
+		for(let j = 0; j < arr[0].length; j++) {
+			retDat.push(arr[i][j]);
 		}
 	}
 	return retDat;
 }
 
+function convertBounds(arr, top) {
+	let largest = arr[0][0];
+	let smallest = arr[0][0];
+	for(let i = 0; i < arr.length; i++){
+		for(let j = 0; j < arr[0].length; j++) {
+			if(arr[i][j] > largest){
+				largest = arr[i][j];
+			}
+			if(arr[i][j] < smallest){
+				smallest = arr[i][j];
+			}
+		}
+	}
+	for(let i = 0; i < arr.length; i++){
+		for(let j = 0; j < arr[0].length; j++) {
+			arr[i][j] = ((arr[i][j] - smallest)/(largest - smallest))*top
+		}
+	}
+	return arr;
+}
 
-function hydraulicErosion(arr, iterations, rain_amount, erosion_weight, evaporation, capacity) {
+function hydraulicErosion(arr, iterations, end, rain_amount, erosion_weight, evaporation, capacity) {
 	let data_in = arr;
 	let water_table = Array(data_in.length).fill().map(() => Array(data_in[0].length).fill(0));
 	let sediment_table = Array(data_in.length).fill().map(() => Array(data_in[0].length).fill(0));
 	for (let i = 0; i < iterations; i++) {
 		console.log(i)
 		//populate water table
-		for(let j = 0; j < data_in.length; j++ ){
-			for(let k = 0; k < data_in[0].length; k++ ) {
-				water_table[j][k] += 1;
+		if(i < end){
+			for(let j = 0; j < data_in.length; j++ ){
+				for(let k = 0; k < data_in[0].length; k++ ) {
+					water_table[j][k] += 1;
+				}
 			}
 		}
 		//move solubility*water[pixel] into sediment table
@@ -166,7 +135,7 @@ function hydraulicErosion(arr, iterations, rain_amount, erosion_weight, evaporat
 		//evaporation and deposition
 		for(let j = 0; j < data_in.length; j++) {
 			for(let k = 0; k < data_in[0].length; k++) {
-				water_table[j][k] -= water_table[j][k] * evaporation
+				water_table[j][k] -= water_table[j][k]* evaporation
 				if (sediment_table[j][k] > capacity*water_table[j][k]) {
 					data_in[j][k] += sediment_table[j][k]+capacity*water_table[j][k]
 					sediment_table[j][k] = capacity*water_table[j][k]
@@ -174,11 +143,65 @@ function hydraulicErosion(arr, iterations, rain_amount, erosion_weight, evaporat
 			}
 		}
 
-
 	}
 
 	return data_in;
 }
 
+function getSimplex(x,y,octaves,scale,persistence, seed) {
+	let out_noise = 0;
+	let maxAmp = 0;
+	let amp = 1
+	let freq = scale;
+	noise.seed(seed);
+	for(let k = 0; k < octaves; k++) {
+		out_noise += noise.simplex2(x*freq, y*freq);
+		maxAmp += amp;
+		amp *= persistence;
+		freq *= 2;
+	}
+	out_noise /= maxAmp;
+	return out_noise
+}
 
-</script>
+function createRidged(w, l, freq, lacunarity, octaves, seed) {
+	let scale = 0.0025
+	let heightmap = [];
+	let hpIndex = 0;
+	let seeds = []
+	for(let i = 0; i < octaves; i++){
+		seeds.push(Math.random());
+	}
+	let offset = 1;
+	let gain = 2;
+	//noise.seed(32);
+	for(let i = 0; i < w; i++){
+		for(let j = 0; j < l; j++) {
+			let persistence = 1
+			let value = 0
+			let weight = 1
+			for(let o = 0; o < octaves; o++){
+				let simplex = getSimplex(i,j,1,scale,persistence,seed)
+				simplex = Math.abs(simplex);
+				simplex = offset - simplex
+				simplex *= simplex
+				simplex *= weight
+
+				weight = simplex * gain
+
+				weight = simplex * gain
+				if(weight > 1) {
+					weight = 1;
+				}
+				if(weight < 0) {
+					weight = 0
+				}
+				value += simplex;
+			}
+			heightmap[hpIndex] = value
+			hpIndex++;
+		}
+	}
+	console.log(heightmap)
+	return heightmap;
+}
