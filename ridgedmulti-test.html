@@ -15,11 +15,12 @@ let hydraulicData = hydraulicErosion(test, 500, 1, .1, 1, 0.5)
 console.log(JSON.parse(JSON.stringify(hydraulicData)))
 hydraulicData = convertBounds(hydraulicData, 255)
 data = bufferFrom2d(hydraulicData)*/
-let data = createRidged(500,500, 0.5, 1, 25, Math.random())
-let data2 = createHeightmap(500, 500, 0.003, 5, 0.5, -1,1)
+let data = createRidged(500,500, 0.001, 1, 8, Math.random())
+/*let data2 = createHeightmap(500, 500, 0.003, 5, 0.5, -1,1)
 for(let i = 0; i < data.length; i++) {
 	data[i] += data2[i];
-}
+}*/
+
 data = convertBounds(data, 255)
 
 
@@ -75,7 +76,7 @@ function getSimplex(x,y,octaves,scale,persistence, seed) {
 	return out_noise
 }
 
-function createRidged(w, l, freq, lacunarity, octaves, seed) {
+function createRidged(w, l, freq, lacunarity, octaves) {
 	let scale = 0.002
 	let heightmap = [];
 	let hpIndex = 0;
@@ -83,7 +84,7 @@ function createRidged(w, l, freq, lacunarity, octaves, seed) {
 	let spectralWeights = []
 	for(let i = 0; i < octaves; i++){
 		seeds.push(Math.random());
-		//spectralWeights[i] = pow
+		spectralWeights[i] = Math.pow(frequency, -1);
 		freq *= lacunarity;
 	}
 	let offset = 1;
@@ -94,8 +95,10 @@ function createRidged(w, l, freq, lacunarity, octaves, seed) {
 			let persistence = 1
 			let value = 0
 			let weight = 1
+			let scale = freq;
 			for(let o = 0; o < octaves; o++){
-				let simplex = getSimplex(i,j,1,scale,persistence,seed)
+				let simplex = getSimplex(i,j,1,scale,persistence,seeds[o])
+				scale*=2
 				simplex = Math.abs(simplex);
 				simplex = offset - simplex
 				simplex *= simplex
@@ -110,9 +113,9 @@ function createRidged(w, l, freq, lacunarity, octaves, seed) {
 				if(weight < 0) {
 					weight = 0
 				}
-				value += simplex;
+				value += (simplex*spectralWeights[o]);
 			}
-			heightmap[hpIndex] = value
+			heightmap[hpIndex] = (value*1.25) - 1;
 			hpIndex++;
 		}
 	}

@@ -7,7 +7,7 @@ let geometry, material, cube;
 let data;
 let meshWidth = 500;
 let meshLength = 500;
-let meshScale = 50;
+let meshScale = 100;
 let clock = new THREE.Clock();
 init();
 animate();
@@ -34,13 +34,16 @@ function init() {
 		controls.lookVertical = true;
 
 	//data = createHeightmap(meshWidth, meshLength, 0.00007, 8, .25, 0,1);
-	data = createRidged(500,500, 1, 1, 5, Math.random());
-	let data2 = createHeightmap(meshWidth, meshLength, 0.00007, 8, .25, 0,4)
-	for(let i = 0; i < data.length; i++) {
-		data[i] += data2[i]
-	}
+	data = createRidged(500,500, 0.0007, 1, 3, Math.random());
+	//let data2 = createHeightmap(meshWidth, meshLength, 0.00007, 8, .25, 0,4)
+	console.log(JSON.parse(JSON.stringify(data)))
+	//console.log(JSON.parse(JSON.stringify(data2)))
+	/*for(let i = 0; i < data.length; i++) {
+		data[i] *= 10
+		data[i] += data2[i]*.1
+	}*/
 	let test = bufferTo2d(data,meshLength)
-	let hydraulicData = hydraulicErosion(test, 500,  500, 20, .003, 1, .75)
+	let hydraulicData = hydraulicErosion(test, 500,  500, 1, .0001, 1, .75)
 	//console.log(JSON.parse(JSON.stringify(hydraulicData)))
 	/*for(let i = 0; i < test.length; i++) {
 		for (let j = 0; j < test[0].length; j++){

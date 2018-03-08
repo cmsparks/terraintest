@@ -1,3 +1,7 @@
+//TODO: fix glitch where the top right corner of the
+// ridged multifractal is consistently higher than
+// other parts of the heightmap.
+
 function createHeightmap(w,l,scale,octaves,persistence,bot,top) {
 	//let heightmap = [...Array(w)].map(i => Array(l));
 	let heightmap = [];
@@ -165,12 +169,15 @@ function getSimplex(x,y,octaves,scale,persistence, seed) {
 }
 
 function createRidged(w, l, freq, lacunarity, octaves, seed) {
-	let scale = 0.0025
+	let scale = 0.002
 	let heightmap = [];
 	let hpIndex = 0;
 	let seeds = []
+	let spectralWeights = []
 	for(let i = 0; i < octaves; i++){
 		seeds.push(Math.random());
+		spectralWeights[i] = Math.pow(freq, -1);
+		freq *= lacunarity;
 	}
 	let offset = 1;
 	let gain = 2;
@@ -180,8 +187,10 @@ function createRidged(w, l, freq, lacunarity, octaves, seed) {
 			let persistence = 1
 			let value = 0
 			let weight = 1
+			let scale = freq;
 			for(let o = 0; o < octaves; o++){
-				let simplex = getSimplex(i,j,1,scale,persistence,seed)
+				let simplex = getSimplex(i,j,1,scale,persistence,seeds[o])
+				scale*=2
 				simplex = Math.abs(simplex);
 				simplex = offset - simplex
 				simplex *= simplex
@@ -196,9 +205,9 @@ function createRidged(w, l, freq, lacunarity, octaves, seed) {
 				if(weight < 0) {
 					weight = 0
 				}
-				value += simplex;
+				value += (simplex*spectralWeights[o]);
 			}
-			heightmap[hpIndex] = value
+			heightmap[hpIndex] = (value*1.25) - 1;
 			hpIndex++;
 		}
 	}
